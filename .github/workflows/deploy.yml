@@ -1,0 +1,41 @@
+name: Build and Deploy to Azure
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to ACR
+      uses: docker/login-action@v2
+      with:
+        registry: mlopsdemo1985.azurecr.io
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        push: true
+        platforms: linux/amd64
+        tags: mlopsdemo1985.azurecr.io/churn-predictor:latest
+
+    - name: Deploy to Azure Container Apps
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        acrName: mlopsdemo1985
+        containerAppName: churn-predictor-app
+        resourceGroup: mlops-demo-rg
+        imageToDeploy: mlopsdemo1985.azurecr.io/churn-predictor:latest
